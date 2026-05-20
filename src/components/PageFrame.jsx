@@ -1,8 +1,8 @@
 import { loveData } from '../data/loveData'
 
-function PageFrame({ children, completedCount, pageTitle, showHeader, showMapButton, onBackToMap }) {
+function PageFrame({ children, completedCount, pageSkin = 'skin-map', pageTitle, showHeader, showMapButton, onBackToMap }) {
   return (
-    <div className="page-frame">
+    <div className={`page-frame ${pageSkin}`}>
       {showHeader && (
         <header className="top-bar">
           <div className="top-bar-copy">

@@ -1,6 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import { loveData } from '../data/loveData'
+import AlbumRewardExperience from './AlbumRewardExperience'
 import LotteryScene from './LotteryScenes'
+
+const EXHAUSTED_PRIZE = {
+  id: 'all-claimed',
+  type: 'system',
+  scene: 'comfort',
+  title: '奖励已经全部抽完啦',
+  copy: '小昕已经把这次520的奖励都收进心里了。后面的每一次见面，小杰再慢慢补新的惊喜。',
+  actionText: loveData.lottery.finishButton,
+}
+
+const FIFTH_LEVEL_FALLBACK_IDS = ['cash100', 'album']
 
 function isLosePrize(value) {
   return (
@@ -10,6 +22,15 @@ function isLosePrize(value) {
     value?.prizeId === 'sorry' ||
     value?.prizeId === 'none'
   )
+}
+
+function getDrawnRewardIds(records, drawnRewardIds = []) {
+  return new Set([
+    ...drawnRewardIds,
+    ...records
+      .filter((record) => record?.prizeId && !record?.isSystemRecord)
+      .map((record) => record.prizeId),
+  ].filter(Boolean))
 }
 
 function getRecentNoPrizeCount(records) {
@@ -38,37 +59,38 @@ function weightedPick(pool) {
   return pool[pool.length - 1]
 }
 
-function pickPrize(records, sourceLevel) {
-  // 1. 提取所有已经抽中过的奖品 ID
-  const wonPrizeIds = records.map(record => record.prizeId);
+function getFifthLevelFallback(drawnIds) {
+  const preferred = FIFTH_LEVEL_FALLBACK_IDS
+    .map((id) => loveData.lottery.prizePool.find((prize) => prize.id === id))
+    .filter(Boolean)
 
-  // 2. 过滤奖池：如果奖品已经被抽中过，并且不是"未中奖"，则从奖池中剔除
-  let pool = loveData.lottery.prizePool.filter(prize => {
-    // 如果想要"未中奖(sorry)"可以作为日常重复刷出的状态，保留此行；
-    // 如果连"未中奖"也只允许出现一次，可以将此行删除。
-    if (isLosePrize(prize)) return true; 
-    return !wonPrizeIds.includes(prize.id);
-  });
-
-  // 3. 必中保底逻辑：连续两次没中，或者是第五关通关
-  const mustWin = getRecentNoPrizeCount(records) >= 2 || sourceLevel?.id === 'level-5';
-  if (mustWin) {
-    pool = pool.filter((prize) => !isLosePrize(prize));
-  }
-
-  // 4. 兜底逻辑：如果所有真实奖品都已经被抽完了，给一个默认提示防止报错
-  if (pool.length === 0) {
-    return loveData.lottery.prizePool.find(p => isLosePrize(p)) || loveData.lottery.prizePool[0];
-  }
-
-  return weightedPick(pool);
+  return preferred.find((prize) => !drawnIds.has(prize.id)) || preferred[0] || EXHAUSTED_PRIZE
 }
 
-function LotteryPage({ records, sourceLevel, onFinish, onRecord }) {
+function pickPrize({ drawnRewardIds = [], records, sourceLevel }) {
+  const isFifthLevel = sourceLevel?.id === 'level-5'
+  const drawnIds = getDrawnRewardIds(records, drawnRewardIds)
+  const availablePool = loveData.lottery.prizePool.filter((prize) => !drawnIds.has(prize.id))
+  const mustWin = getRecentNoPrizeCount(records) >= 2 || isFifthLevel
+  const pool = mustWin ? availablePool.filter((prize) => !isLosePrize(prize)) : availablePool
+
+  if (pool.length > 0) {
+    return weightedPick(pool)
+  }
+
+  if (isFifthLevel) {
+    return getFifthLevelFallback(drawnIds)
+  }
+
+  return availablePool[0] || EXHAUSTED_PRIZE
+}
+
+function LotteryPage({ drawnRewardIds, records, sourceLevel, onFinish, onRecord }) {
   const [sceneReady, setSceneReady] = useState(false)
   const [flipped, setFlipped] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [selectedPrize] = useState(() => pickPrize(records, sourceLevel))
+  const [selectedPrize] = useState(() => pickPrize({ drawnRewardIds, records, sourceLevel }))
+  const isAlbumPrize = selectedPrize.id === 'album'
 
   const sourceLabel = sourceLevel
     ? `${loveData.lottery.fromLevelPrefix}「${sourceLevel.title}」`
@@ -92,8 +114,13 @@ function LotteryPage({ records, sourceLevel, onFinish, onRecord }) {
       prizeId: selectedPrize.id,
       prizeTitle: selectedPrize.title,
       prizeType: selectedPrize.type,
+      isSystemRecord: selectedPrize.id === EXHAUSTED_PRIZE.id,
     })
     setSaved(true)
+  }
+
+  if (flipped && isAlbumPrize) {
+    return <AlbumRewardExperience onFinish={onFinish} />
   }
 
   return (

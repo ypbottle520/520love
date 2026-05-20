@@ -23,6 +23,7 @@ function App() {
     gameState,
     openFinalGift,
     passPassword,
+    resetLotteryRecords,
     resetGameState,
     unlockEasterEgg,
   } = useGameState()
@@ -46,6 +47,17 @@ function App() {
     if (route === 'confession') return loveData.confession.title
     return loveData.map.title
   }, [activeLevel, route])
+
+  const pageSkin = useMemo(() => {
+    if (!gameState.passwordPassed) return 'skin-entry'
+    if (activeLevel?.id === 'level-5') return 'skin-code'
+    if (activeLevel) return `skin-game skin-${activeLevel.id}`
+    if (route === 'lottery') return 'skin-reward'
+    if (route === 'album') return 'skin-album'
+    if (route === 'egg') return 'skin-egg'
+    if (route === 'gift' || route === 'confession') return 'skin-letter'
+    return 'skin-map'
+  }, [activeLevel, gameState.passwordPassed, route])
 
   useEffect(() => {
     document.title = loveData.meta.title
@@ -104,6 +116,12 @@ function App() {
     setToast(loveData.actions.confirmReset)
   }
 
+  const resetLotteryOnly = () => {
+    resetLotteryRecords()
+    setLotteryContext(null)
+    setToast('抽奖记录已重置。')
+  }
+
   const openSideQuest = (questId) => {
     if (questId === 'lottery') {
       setLotteryContext(null)
@@ -131,6 +149,7 @@ function App() {
   ) : route === 'lottery' ? (
     <LotteryPage
       sourceLevel={lotteryContext}
+      drawnRewardIds={gameState.drawnRewardIds}
       records={gameState.lotteryRecords}
       onFinish={finishLottery}
       onRecord={addLotteryRecord}
@@ -168,6 +187,7 @@ function App() {
       onOpenLevel={openLevel}
       onOpenSideQuest={openSideQuest}
       onReset={resetAll}
+      onResetLotteryRecords={resetLotteryOnly}
     />
   )
 
@@ -176,6 +196,7 @@ function App() {
       <AmbientBackground />
       <PageFrame
         completedCount={completedCount}
+        pageSkin={pageSkin}
         pageTitle={pageTitle}
         showHeader={gameState.passwordPassed}
         showMapButton={gameState.passwordPassed && route !== 'map' && !(route === 'lottery' && lotteryContext)}

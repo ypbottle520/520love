@@ -11,7 +11,10 @@ function MainMapPage({
   onOpenLevel,
   onOpenSideQuest,
   onReset,
+  onResetLotteryRecords,
 }) {
+  const isDebugMode = import.meta.env.DEV
+
   return (
     <div className="map-layout">
       <section className="map-hero glass-card">
@@ -100,6 +103,12 @@ function MainMapPage({
       <button className="text-button" onClick={onReset} type="button">
         {loveData.actions.reset}
       </button>
+
+      {isDebugMode && (
+        <button className="text-button debug-reset-button" onClick={onResetLotteryRecords} type="button">
+          重置抽奖记录
+        </button>
+      )}
     </div>
   )
 }

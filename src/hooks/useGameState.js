@@ -1,7 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
 import { initialGameState, loveData } from '../data/loveData'
 
+function getRewardIdsFromRecords(records) {
+  return records
+    .filter((record) => record?.prizeId && !record?.isSystemRecord)
+    .map((record) => record.prizeId)
+}
+
+function uniqueRewardIds(ids) {
+  return Array.from(new Set(ids.filter(Boolean)))
+}
+
 function normalizeState(value) {
+  const lotteryRecords = Array.isArray(value?.lotteryRecords) ? value.lotteryRecords : []
+  const storedRewardIds = Array.isArray(value?.drawnRewardIds) ? value.drawnRewardIds : []
+
   const merged = {
     ...initialGameState,
     ...value,
@@ -13,7 +26,8 @@ function normalizeState(value) {
       ...initialGameState.easterEggs,
       ...(value?.easterEggs || {}),
     },
-    lotteryRecords: Array.isArray(value?.lotteryRecords) ? value.lotteryRecords : [],
+    lotteryRecords,
+    drawnRewardIds: uniqueRewardIds([...storedRewardIds, ...getRewardIdsFromRecords(lotteryRecords)]),
     easterEggRecords: Array.isArray(value?.easterEggRecords) ? value.easterEggRecords : [],
   }
 
@@ -71,6 +85,7 @@ export function useGameState() {
     prizeId,
     prizeTitle,
     prizeType,
+    isSystemRecord = false,
   }) => {
     setGameState((current) => {
       const record = {
@@ -83,13 +98,28 @@ export function useGameState() {
         prizeId,
         prizeTitle,
         prizeType,
+        isSystemRecord,
       }
+      const drawnRewardIds = isSystemRecord
+        ? current.drawnRewardIds
+        : uniqueRewardIds([...current.drawnRewardIds, prizeId])
 
       return normalizeState({
         ...current,
+        drawnRewardIds,
         lotteryRecords: [record, ...current.lotteryRecords],
       })
     })
+  }
+
+  const resetLotteryRecords = () => {
+    setGameState((current) =>
+      normalizeState({
+        ...current,
+        drawnRewardIds: [],
+        lotteryRecords: [],
+      }),
+    )
   }
 
   const unlockEasterEgg = (egg) => {
@@ -138,6 +168,7 @@ export function useGameState() {
     gameState,
     openFinalGift,
     passPassword,
+    resetLotteryRecords,
     resetGameState,
     unlockEasterEgg,
   }

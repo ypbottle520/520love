@@ -3,6 +3,14 @@ import { loveData } from '../data/loveData'
 import { ChibiXiaojie, ChibiXiaoxin } from './ChibiCharacters'
 import SafeImage from './SafeImage'
 
+const eggHints = [
+  '恋爱开始的那一天，四位数字。',
+  '小杰的生日，月份和日期都写成两位。',
+  '小昕的生日，月份和日期都写成两位。',
+  '把两个生日安静地放在一起。',
+  '从开始那天，到今天最想说喜欢你的数字。',
+]
+
 function EggAsset({ asset }) {
   if (!asset) return null
 
@@ -74,6 +82,13 @@ function EasterEggPage({ easterEggs = {}, onUnlock }) {
       <p className="eyebrow">{loveData.egg.eyebrow}</p>
       <h2>{loveData.egg.title}</h2>
       <p>{loveData.egg.copy}</p>
+
+      <section className="egg-hint-board" aria-label="隐藏口令提示">
+        <span>口令线索</span>
+        {eggHints.map((hint) => (
+          <p key={hint}>{hint}</p>
+        ))}
+      </section>
 
       <form className="egg-code-form" onSubmit={submitCode}>
         <input
